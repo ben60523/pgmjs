@@ -4,3 +4,5 @@ package-lock.json
 *.pgm
 compile_commands.json
 .clangd
+pgm
+.vscode

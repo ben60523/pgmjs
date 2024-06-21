@@ -1,3 +1,3 @@
 const { readPGM } = require('./index')
 
-console.log(readPGM('/home/ben/map.pgm'));
+console.log(readPGM('pgm/map.pgm'));

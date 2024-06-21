@@ -2,9 +2,6 @@
 
 #include <vector>
 
-#include "js_native_api.h"
-#include "napi-inl.h"
-
 extern "C" {
 #include "pgm.h"
 }
@@ -23,7 +20,6 @@ Napi::Value readPGM(const Napi::CallbackInfo &info) {
   int w = image->width;
   int h = image->height;
   int maxVal = image->maxVal;
-  int data[w][h];
   Napi::Int32Array buf = Napi::Int32Array::New(env, w * h);
 
   for (int i = h - 1; i >= 0; i--) {

@@ -17,7 +17,7 @@ void getPGMfile (const char filename[], PGMImage *img)
   int row, col, type;
   int ch_int;
 
-  in_file = fopen(filename, "r");
+  in_file = fopen(filename, "rb");
   if (in_file == NULL)
   {
     fprintf(stderr, "Error: Unable to open file %s\n\n", filename);

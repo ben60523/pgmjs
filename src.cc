@@ -26,7 +26,7 @@ Napi::Value readPGM(const Napi::CallbackInfo &info) {
   int data[w][h];
   Napi::Int32Array buf = Napi::Int32Array::New(env, w * h);
 
-  for (int i = 0; i < h; i++) {
+  for (int i = h - 1; i >= 0; i--) {
     for (int j = 0; j < w; j++) {
       buf[i * w + j] = image->data[i][j].red;
     }

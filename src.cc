@@ -31,12 +31,18 @@ Napi::Value readPGM(const Napi::CallbackInfo &info) {
       buf[i * w + j] = image->data[i][j].red;
     }
   }
+  Napi::Array res = Napi::Array::New(env, 3);
+  res[1] = w;
+  res[2] = h;
+  napi_set_element(env, res, 0, buf);
+  napi_set_element(env, res, 1, Napi::Number::New(env, w));
+  napi_set_element(env, res, 2, Napi::Number::New(env, h));
 
   // save(image);
 
   free(image);
 
-  return buf;
+  return res;
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {

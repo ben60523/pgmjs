@@ -6,6 +6,7 @@
 
 /*max size of an image*/
 #define MAX 800
+#define MAP_IDX(sx, i, j) ((sx) * (j) + (i))
 
 /*
 #define LOW_VALUE 0
@@ -26,7 +27,15 @@ struct PGMstructure {
   RGB_INT data[MAX][MAX];
 };
 
+struct OccGridMapStructure {
+  double resolution;
+  int width;
+  int height;
+  int *data;
+};
+
 typedef struct PGMstructure PGMImage;
+typedef struct OccGridMapStructure OccGridMap;
 
 /***prototypes**********************************************************/
 /***********************************************************************/

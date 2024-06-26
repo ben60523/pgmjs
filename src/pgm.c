@@ -85,15 +85,14 @@ void getPGMfile (const char filename[], PGMImage *img)
      for (row=(*img).height-1; row >=0; row--)
        for (col=0; col< (*img).width; col++)
        {
-	  
-	  fscanf(in_file,"%d", &ch_int);
-	  ((*img).data[row][col].red) = (unsigned char)ch_int;
-     
-	  fscanf(in_file,"%d", &ch_int);
-	  ((*img).data[row][col].green) = (unsigned char)ch_int;
-	  
-	  fscanf(in_file,"%d", &ch_int);
-	  ((*img).data[row][col].blue) = (unsigned char)ch_int;
+          fscanf(in_file,"%d", &ch_int);
+          ((*img).data[row][col].red) = (unsigned char)ch_int;
+          
+          fscanf(in_file,"%d", &ch_int);
+          ((*img).data[row][col].green) = (unsigned char)ch_int;
+          
+          fscanf(in_file,"%d", &ch_int);
+          ((*img).data[row][col].blue) = (unsigned char)ch_int;
        }
   }
   else if(type == 5) /*compressed file (B/W)*/
@@ -101,10 +100,10 @@ void getPGMfile (const char filename[], PGMImage *img)
   {
      while(getc(in_file) != '\n'); /*skip to end of line*/
 
-      for (row=(*img).height-1; row >=0; row--)
+      for (row=0; row < (*img).height; row++)
        for (col=0; col< (*img).width; col++)
        {
-	  ch = getc(in_file);
+	        ch = getc(in_file);
           (*img).data[row][col].red = ch;
           (*img).data[row][col].green = ch;
           (*img).data[row][col].blue = ch;

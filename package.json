@@ -12,10 +12,13 @@
     "node-addon-api": "^8.0.0"
   },
   "devDependencies": {
-    "node-gyp": "^10.1.0"
+    "node-gyp": "^10.1.0",
+    "js-yaml": "^4.1.0"
   },
   "scripts": {
+    "configure": "npx node-gyp configure -- -f compile_commands_json",
     "build": "node-gyp rebuild",
+    "build:dev": "node-gyp rebuild --debug",
     "test": "node test.js"
   }
 }

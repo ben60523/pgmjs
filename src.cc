@@ -1,7 +1,9 @@
 #include <napi.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <utility>
 #include <vector>
 
 extern "C" {
@@ -10,11 +12,13 @@ extern "C" {
 
 static PGMImage *image;
 static OccGridMap *occ;
-static int *traversal_tbl;
+// static int *v_tbl;
+static std::vector<int> v_tbl;
+static std::vector<std::vector<std::pair<int, int>>> parents;
 
-bool findPath(int x, int y, int w, int h, int goal_x, int goal_y,
-              bool isRotation) {
-  if (traversal_tbl[y * h + x] != 0) {
+bool findPath(int x, int y, int w, int h, int goal_x, int goal_y, int parent_x,
+              int parent_y, bool isRotation) {
+  if (v_tbl[y * h + x] != 0) {
     return false;
   }
   if (x >= w || y >= h) {
@@ -22,10 +26,10 @@ bool findPath(int x, int y, int w, int h, int goal_x, int goal_y,
     return false;
   }
 
-  traversal_tbl[y * h + x] = 1;
+  v_tbl[y * h + x] = 1;
   if (image->data[y][x].red < 205) {
     // printf("(%d, %d) cannot be reached\r\n", x, y);
-    traversal_tbl[y * h + x] = 2;
+    v_tbl[y * h + x] = 2;
     return false;
   }
 
@@ -41,36 +45,38 @@ bool findPath(int x, int y, int w, int h, int goal_x, int goal_y,
     for (int i = (x - robot_size_x); i <= (x + robot_size_x); i++) {
       if (j < 0 || j >= h || i < 0 || i >= w) {
         // printf("out-of-bound\r\n");
-        traversal_tbl[y * h + x] = 2;
+        v_tbl[y * h + x] = 2;
         return false;
       }
       int data = image->data[j][i].red;
       if (data == 0 || data == 205) {
         // printf("the robot cannot pass this node\r\n");
-        traversal_tbl[y * h + x] = 2;
+        v_tbl[y * h + x] = 2;
         return false;
       }
     }
   }
 
+  parents[x][y] = {parent_x, parent_y};
+
   if (goal_x == x && goal_y == y) {
     return true;
   }
 
-  if (findPath(x + 1, y, w, h, goal_x, goal_y, false)) {
+  if (findPath(x + 1, y, w, h, goal_x, goal_y, x, y, false)) {
     return true;
   }
-  if (findPath(x - 1, y, w, h, goal_x, goal_y, false)) {
+  if (findPath(x - 1, y, w, h, goal_x, goal_y, x, y, false)) {
     return true;
   }
-  if (findPath(x, y + 1, w, h, goal_x, goal_y, true)) {
+  if (findPath(x, y + 1, w, h, goal_x, goal_y, x, y, true)) {
     return true;
   }
-  if (findPath(x, y - 1, w, h, goal_x, goal_y, true)) {
+  if (findPath(x, y - 1, w, h, goal_x, goal_y, x, y, true)) {
     return true;
   }
 
-  traversal_tbl[y * h + x] = 2;
+  v_tbl[y * h + x] = 2;
   return false;
 }
 
@@ -190,27 +196,42 @@ Napi::Value navigation(const Napi::CallbackInfo &info) {
   double resolution = occ->resolution;
   // int target_x_pix = target_x / resolution;
   // int target_y_pix = target_y / resolution;
-  traversal_tbl = (int *)calloc(w * h, sizeof(int));
-  bool res =
-      findPath(robot_pose_x, robot_pose_y, w, h, target_x, target_y, false);
-
-  for (int y = 0; y < h; y++) {
-    for (int x = 0; x < w; x++) {
-      switch (traversal_tbl[y * h + x]) {
-        case 0:
-          printf("#");
-          break;
-        case 1:
-          printf(" ");
-          break;
-        case 2:
-          printf("X");
-          break;
-        default:
-          break;
-      }
-    }
-    printf("\n");
+  // v_tbl = (int *)calloc(w * h, sizeof(int));
+  v_tbl.clear();
+  v_tbl.resize(w * h, 0);
+  parents.clear();
+  parents.resize(w, std::vector<std::pair<int, int>>(h));
+  bool res = findPath(robot_pose_x, robot_pose_y, w, h, target_x, target_y, -1,
+                      -1, false);
+  // for (int y = 0; y < h; y++) {
+  //   for (int x = 0; x < w; x++) {
+  //     switch (v_tbl[y * h + x]) {
+  //       case 0:
+  //         printf("#");
+  //         break;
+  //       case 1:
+  //         printf(" ");
+  //         break;
+  //       case 2:
+  //         printf("X");
+  //         break;
+  //       default:
+  //         break;
+  //     }
+  //   }
+  //   printf("\n");
+  // }
+  std::vector<std::pair<int, int>> path;
+  std::pair<int, int> current = {target_x, target_y};
+  std::pair<int, int> start = {robot_pose_x, robot_pose_y};
+  while (current != start) {
+    path.push_back(current);
+    current = parents[current.first][current.second];
+  }
+  path.push_back(start);
+  std::reverse(path.begin(), path.end());
+  for (const auto &point : path) {
+    printf("(%d, %d) -> ", point.first, point.second);
   }
   return Napi::Boolean::New(env, res);
 }
@@ -226,9 +247,9 @@ Napi::Value freeObjs(const Napi::CallbackInfo &info) {
     printf("OCC_Grid is free\r\n");
   }
 
-  if (traversal_tbl) {
-    free(traversal_tbl);
-  }
+  // if (v_tbl) {
+  //   free(v_tbl);
+  // }
 
   Napi::Env env = info.Env();
   return Napi::Boolean::New(env, true);

@@ -11,9 +11,9 @@ const occ = loadMap(Number(yaml_obj.occupied_thresh), Number(yaml_obj.free_thres
 const occ_arr = [...new Int32Array(occ)]
 console.log(`Max: ${math.max(occ_arr)}, Min: ${math.min(occ_arr)}, Mean: ${math.mean(occ_arr)}, Len: ${occ_arr.length}`)
 console.log(navigation(190, 318, 0, 190, 153));
-console.log(' ');
-console.log(navigation(190, 318, 0, 385, 181));
-console.log(' ');
-console.log(navigation(190, 318, 0, 350, 113));
+// console.log(' ');
+// console.log(navigation(190, 318, 0, 385, 181));
+// console.log(' ');
+// console.log(navigation(190, 318, 0, 350, 113));
 
 freeObjs();

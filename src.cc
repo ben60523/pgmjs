@@ -10,6 +10,8 @@ extern "C" {
 #include "pgm.h"
 }
 
+#define pixel(data) (data.red + data.green + data.blue) / 3
+
 typedef struct {
   int x, y;
   int dist;
@@ -21,12 +23,31 @@ static PGMImage *image;
 static std::vector<std::vector<bool>> v_tbl;
 static std::vector<std::vector<std::pair<int, int>>> parents;
 
-bool isValid(int x, int y) {
+bool isValid(int x, int y, bool isRotation) {
+  int robot_w = 1.1 / 2;
+  int robot_h = 0.7 / 2;
+  int robot_size_x = robot_w / 0.05;
+  int robot_size_y = robot_h / 0.05;
   int w = image->width;
   int h = image->height;
-  int data = (image->data[y][x].red + image->data[y][x].green +
-              image->data[y][x].blue) /
-             3;
+  int data = pixel(image->data[y][x]);
+
+  if (isRotation) {
+    robot_size_x = robot_h / 0.05;
+    robot_size_y = robot_w / 0.05;
+  }
+
+  for (int j = (y - robot_size_y); j <= (y + robot_size_y); j++) {
+    for (int i = (x - robot_size_x); i <= (x + robot_size_x); i++) {
+      if (j < 0 || j >= h || i < 0 || i >= w) {
+        return false;
+      }
+      int data = pixel(image->data[j][i]);
+      if (data < 254) {
+        return false;
+      }
+    }
+  }
   return (x >= 0) && (x < w) && (y >= 0) && (y < h) && (data >= 254) &&
          (!v_tbl[x][y]);
 }
@@ -54,16 +75,11 @@ int BFS(int startX, int startY, int endX, int endY) {
   }
 
   // Queue for BFS
-  // Node queue[w * h];
-  Node *queue = (Node*)malloc(w * h * sizeof(Node));
+  Node queue[w * h];
   int front = 0, rear = 0;
 
   // Enqueue the starting cell and mark it as v_tbl
-  Node n = Node();
-  n.x = startX;
-  n.y = startY;
-  n.dist = 0;
-  queue[rear++] = n;
+  queue[rear++] = (Node){startX, startY, 0};
   v_tbl[startX][startY] = true;
 
   // Perform BFS
@@ -76,7 +92,6 @@ int BFS(int startX, int startY, int endX, int endY) {
 
     // If we reached the destination cell, return the distance
     if (x == endX && y == endY) {
-      free(queue);
       return dist;
     }
 
@@ -88,21 +103,16 @@ int BFS(int startX, int startY, int endX, int endY) {
       int newCol = y + colNum[k];
 
       // Check if the move is valid
-      if (isValid(newRow, newCol)) {
+      if (isValid(newRow, newCol, colNum[k] == 0)) {
         // Mark the cell as v_tbl and enqueue it
         v_tbl[newRow][newCol] = true;
         parents[newRow][newCol] = {x, y};
-        Node next_n = Node();
-        next_n.x = newRow;
-        next_n.y = newCol;
-        next_n.dist = dist + 1;
-        queue[rear++] = next_n;
+        queue[rear++] = (Node){newRow, newCol, dist + 1};
       }
     }
   }
 
   // If the destination is not reachable, return -1
-  free(queue);
   return -1;
 }
 
@@ -181,7 +191,7 @@ int BFS(int startX, int startY, int endX, int endY) {
 // }
 
 Napi::Value readPGM(const Napi::CallbackInfo &info) {
-  printf("version: 0.0.0\r\n");
+  printf("version: 0.0.1\r\n");
   Napi::Env env = info.Env();
   std::string fPath = info[0].As<Napi::String>();
   image = new PGMImage();
@@ -307,16 +317,16 @@ Napi::Value navigation(const Napi::CallbackInfo &info) {
   // -1,
   //                     -1, false, min_dist, 0);
   bool res = BFS(robot_pose_x, robot_pose_y, target_x, target_y) > 0;
-  for (int y = 0; y < h; y++) {
-    for (int x = 0; x < w; x++) {
-      if (v_tbl[x][y]) {
-        printf(" ");
-      } else {
-        printf("#");
-      }
-    }
-    printf("\n");
-  }
+  // for (int y = 0; y < h; y++) {
+  //   for (int x = 0; x < w; x++) {
+  //     if (v_tbl[x][y]) {
+  //       printf(" ");
+  //     } else {
+  //       printf("#");
+  //     }
+  //   }
+  //   printf("\n");
+  // }
   if (res) {
     std::vector<std::pair<int, int>> path;
     std::pair<int, int> current = {target_x, target_y};
@@ -327,15 +337,36 @@ Napi::Value navigation(const Napi::CallbackInfo &info) {
     }
     path.push_back(start);
     std::reverse(path.begin(), path.end());
-    Napi::Array arr = Napi::Array::New(env, path.size());
+    Napi::Array arr = Napi::Array::New(env);
     int index = 0;
+    std::vector<std::pair<int, int>> parent_point_set;
     for (const auto &point : path) {
-      // printf("(%d, %d) -> ", point.first, point.second);
+      if (parent_point_set.size() < 2) {
+        parent_point_set.push_back(point);
+        continue;
+      }
+      std::pair<int, int> parent_point_0 = parent_point_set[0];
+      std::pair<int, int> parent_point_1 = parent_point_set[1];
+      // true: x direction, false: y directions
+      bool former_direction = parent_point_0.first == parent_point_1.first;
+      bool current_direction = parent_point_1.first == point.first;
+      bool isTurn = former_direction != current_direction;
+      if (isTurn) {
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("x", Napi::Number::New(env, parent_point_1.first));
+        obj.Set("y", Napi::Number::New(env, parent_point_1.second));
+        arr[index] = obj;
+        index++;
+      }
+      parent_point_set.erase(parent_point_set.begin());
+      parent_point_set.push_back(point);
+    }
+
+    if (index == 0) {
       Napi::Object obj = Napi::Object::New(env);
-      obj.Set("x", Napi::Number::New(env, point.first));
-      obj.Set("y", Napi::Number::New(env, point.second));
+      obj.Set("x", Napi::Number::New(env, target_x));
+      obj.Set("y", Napi::Number::New(env, target_y));
       arr[index] = obj;
-      index++;
     }
 
     return arr;

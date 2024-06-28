@@ -116,7 +116,7 @@ int BFS(int startX, int startY, int endX, int endY) {
         next_n.x = newRow;
         next_n.y = newCol;
         next_n.dist = dist + 1;
-        queue[rear++] = n;
+        queue[rear++] = next_n;
       }
     }
   }

@@ -75,11 +75,15 @@ int BFS(int startX, int startY, int endX, int endY) {
   }
 
   // Queue for BFS
-  Node queue[w * h];
+  Node *queue = (Node *)malloc(w * h * sizeof(Node));
   int front = 0, rear = 0;
 
   // Enqueue the starting cell and mark it as v_tbl
-  queue[rear++] = (Node){startX, startY, 0};
+  Node n;
+  n.x = startX;
+  n.y = startY;
+  n.dist = 0;
+  queue[rear++] = n;
   v_tbl[startX][startY] = true;
 
   // Perform BFS
@@ -92,6 +96,7 @@ int BFS(int startX, int startY, int endX, int endY) {
 
     // If we reached the destination cell, return the distance
     if (x == endX && y == endY) {
+      free(queue);
       return dist;
     }
 
@@ -107,12 +112,17 @@ int BFS(int startX, int startY, int endX, int endY) {
         // Mark the cell as v_tbl and enqueue it
         v_tbl[newRow][newCol] = true;
         parents[newRow][newCol] = {x, y};
-        queue[rear++] = (Node){newRow, newCol, dist + 1};
+        Node next_n = Node();
+        next_n.x = newRow;
+        next_n.y = newCol;
+        next_n.dist = dist + 1;
+        queue[rear++] = n;
       }
     }
   }
 
   // If the destination is not reachable, return -1
+  free(queue);
   return -1;
 }
 
